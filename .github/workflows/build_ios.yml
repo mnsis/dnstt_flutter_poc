@@ -38,6 +38,13 @@ jobs:
           pushd go/dnsttwrap
           go mod tidy
           gomobile bind -target=ios -o ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -prefix=DNSTT .
+
+          echo "=== Inspect DNSTT.xcframework ==="
+          ls -lah ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework || true
+          echo "=== Find Swiftmodule (names) ==="
+          find ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -maxdepth 4 -type f \( -name "*.swiftmodule" -o -name "*.swiftinterface" -o -name "*.h" \) -print || true
+          echo "=== Try dump objc/swift symbols ==="
+          find ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -type f -name "DNSTT" -o -name "*.a" | head -n 20 || true
           popd
 
       - name: Flutter pub get
