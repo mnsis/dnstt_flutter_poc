@@ -20,13 +20,26 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
           flutter-version: '3.38.7'
+          channel: 'stable'
 
-      - name: Install gomobile
+      # ثبّت gomobile من سورس قديم (قبل 2025) حتى نضمن وجود bind/objc
+      - name: Install gomobile (pin old x/mobile)
         run: |
-          go install golang.org/x/mobile/cmd/gomobile@latest
-          go install golang.org/x/mobile/cmd/gobind@latest
+          set -eux
+          export GOPATH="$HOME/go"
+          echo "$GOPATH/bin" >> "$GITHUB_PATH"
+
+          mkdir -p "$GOPATH/src/golang.org/x"
+          cd "$GOPATH/src/golang.org/x"
+          git clone https://github.com/golang/mobile.git mobile
+          cd mobile
+
+          REF="$(git rev-parse --verify origin/master 2>/dev/null || git rev-parse --verify origin/main)"
+          COMMIT="$(git rev-list -n 1 --before='2025-01-01' "$REF")"
+          git checkout "$COMMIT"
+
+          GO111MODULE=off go install ./cmd/gomobile ./cmd/gobind
           gomobile init
 
       - name: Build DNSTT.xcframework
@@ -35,10 +48,20 @@ jobs:
           mkdir -p packages/dnstt_mobile/ios/Frameworks
           pushd go/dnsttwrap
           go mod tidy
-          gomobile bind -target=ios -o ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework .
+          gomobile bind -target=ios -o ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -prefix=DNSTT .
           popd
-          # طباعة أسماء الدوال المصدّرة (حتى نتأكد من أسماء Go* بالهيدر)
-          grep -R "GoDnsttwrap" -n packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework || true
+
+      # اطبع أسماء الدوال/الهيدر حتى نعرف شنو ننادي بالـ Swift بالضبط
+      - name: Dump generated symbols
+        if: always()
+        run: |
+          set -eux
+          if [ -d packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework ]; then
+            find packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -name "*.h" -maxdepth 6 -print
+            grep -R "StartTunnel\|StopTunnel\|IsRunning\|LastError" -n packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework || true
+          else
+            echo "DNSTT.xcframework not generated (bind step failed earlier)."
+          fi
 
       - name: Flutter pub get
         working-directory: app
