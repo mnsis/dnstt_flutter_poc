@@ -20,7 +20,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
+          flutter-version: '3.38.7'
 
       - name: Install gomobile
         run: |
@@ -29,23 +30,25 @@ jobs:
           gomobile init
 
       - name: Build DNSTT.xcframework
-        env:
-          GOFLAGS: -mod=mod
+        shell: bash
         run: |
           set -eux
-          rm -rf vendor go/dnsttwrap/vendor
           mkdir -p packages/dnstt_mobile/ios/Frameworks
           pushd go/dnsttwrap
           go mod tidy
           gomobile bind -target=ios -o ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -prefix=DNSTT .
-
-          echo "=== Inspect DNSTT.xcframework ==="
-          ls -lah ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework || true
-          echo "=== Find Swiftmodule (names) ==="
-          find ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -maxdepth 4 -type f \( -name "*.swiftmodule" -o -name "*.swiftinterface" -o -name "*.h" \) -print || true
-          echo "=== Try dump objc/swift symbols ==="
-          find ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -type f -name "DNSTT" -o -name "*.a" | head -n 20 || true
           popd
+
+      - name: Dump DNSTT headers
+        shell: bash
+        run: |
+          set -eux
+          echo "=== DNSTT headers ==="
+          find packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -maxdepth 8 -type f -name "*.h" -print
+          for f in $(find packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -maxdepth 8 -type f -name "*.h"); do
+            echo "----- $f -----"
+            sed -n '1,200p' "$f"
+          done
 
       - name: Flutter pub get
         working-directory: app
@@ -53,7 +56,7 @@ jobs:
 
       - name: Build iOS (no codesign)
         working-directory: app
-        run: flutter build ios --no-codesign
+        run: flutter build ios --release --no-codesign
 
       - name: Zip Runner.app
         working-directory: app
