@@ -1,0 +1,39 @@
+name: Build iOS (No Codesign)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # إعداد بيئة Java الضرورية لبعض أدوات Flutter
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '11'
+
+    # تثبيت Flutter
+    - uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0' # أو أي إصدار حديث
+        channel: 'stable'
+
+    # تحميل المكاتب
+    - name: Install dependencies
+      run: flutter pub get
+
+    # بناء التطبيق بدون توقيع (للتأكد من الكود فقط)
+    - name: Build iOS
+      run: flutter build ios --release --no-codesign
+
+    # رفع الملف الناتج لكي تحمله أنت لاحقاً
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: Runner.app
+        path: build/ios/iphoneos/Runner.app
