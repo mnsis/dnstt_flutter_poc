@@ -20,17 +20,17 @@ public class DnsttMobilePlugin: NSObject, FlutterPlugin {
         return
       }
 
-      // NOTE: gomobile bind exports package-level funcs as class methods on DNSTT + packageName
-      let started = DNSTTDnsttwrap.startTunnel(withDomain: domain, pubkey: pubkey, resolver: resolver)
+      // gomobile bind exports functions like GoDnsttwrapStartTunnel(...)
+      let started = DNSTT.GoDnsttwrapStartTunnel(domain, pubkey, resolver)
       result(started)
 
     case "stopTunnel":
-      DNSTTDnsttwrap.stopTunnel()
+      DNSTT.GoDnsttwrapStopTunnel()
       result(nil)
 
     case "status":
-      let running = DNSTTDnsttwrap.isRunning()
-      let lastError = DNSTTDnsttwrap.lastError()
+      let running = DNSTT.GoDnsttwrapIsRunning()
+      let lastError = DNSTT.GoDnsttwrapLastError()
       result([
         "running": running,
         "lastError": lastError,
