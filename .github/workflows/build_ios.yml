@@ -22,46 +22,54 @@ jobs:
         with:
           flutter-version: '3.38.7'
           channel: 'stable'
+          cache: true
 
-      # ثبّت gomobile من سورس قديم (قبل 2025) حتى نضمن وجود bind/objc
-      - name: Install gomobile (pin old x/mobile)
+      - name: Install gomobile (GOPATH with deps)
+        shell: bash
         run: |
           set -eux
           export GOPATH="$HOME/go"
-          echo "$GOPATH/bin" >> "$GITHUB_PATH"
+          export PATH="$GOPATH/bin:$PATH"
+          export GO111MODULE=off
 
           mkdir -p "$GOPATH/src/golang.org/x"
           cd "$GOPATH/src/golang.org/x"
-          git clone https://github.com/golang/mobile.git mobile
+
+          [ -d mobile ] || git clone https://go.googlesource.com/mobile
+          [ -d mod ]    || git clone https://go.googlesource.com/mod
+          [ -d sync ]   || git clone https://go.googlesource.com/sync
+          [ -d tools ]  || git clone https://go.googlesource.com/tools
+          [ -d sys ]    || git clone https://go.googlesource.com/sys
+
           cd mobile
-
-          REF="$(git rev-parse --verify origin/master 2>/dev/null || git rev-parse --verify origin/main)"
-          COMMIT="$(git rev-list -n 1 --before='2025-01-01' "$REF")"
-          git checkout "$COMMIT"
-
-          GO111MODULE=off go install ./cmd/gomobile ./cmd/gobind
+          go install ./cmd/gomobile ./cmd/gobind
           gomobile init
 
       - name: Build DNSTT.xcframework
+        shell: bash
         run: |
           set -eux
-          mkdir -p packages/dnstt_mobile/ios/Frameworks
-          pushd go/dnsttwrap
-          go mod tidy
-          gomobile bind -target=ios -o ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -prefix=DNSTT .
-          popd
+          export GOPATH="$HOME/go"
+          export PATH="$GOPATH/bin:$PATH"
+          export GO111MODULE=off
 
-      # اطبع أسماء الدوال/الهيدر حتى نعرف شنو ننادي بالـ Swift بالضبط
-      - name: Dump generated symbols
-        if: always()
+          mkdir -p packages/dnstt_mobile/ios/Frameworks
+
+          mkdir -p "$GOPATH/src/example.com"
+          rm -rf "$GOPATH/src/example.com/dnsttwrap"
+          ln -s "$GITHUB_WORKSPACE/go/dnsttwrap" "$GOPATH/src/example.com/dnsttwrap"
+
+          gomobile bind -target=ios \
+            -o "$GITHUB_WORKSPACE/packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework" \
+            -prefix=DNSTT \
+            example.com/dnsttwrap
+
+      - name: (debug) show generated symbols
+        shell: bash
         run: |
           set -eux
-          if [ -d packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework ]; then
-            find packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -name "*.h" -maxdepth 6 -print
-            grep -R "StartTunnel\|StopTunnel\|IsRunning\|LastError" -n packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework || true
-          else
-            echo "DNSTT.xcframework not generated (bind step failed earlier)."
-          fi
+          grep -R "StartTunnel\|StopTunnel\|IsRunning\|LastError" -n \
+            packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework || true
 
       - name: Flutter pub get
         working-directory: app
