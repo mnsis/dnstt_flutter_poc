@@ -11,6 +11,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -24,52 +27,26 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install gomobile (GOPATH with deps)
+      - name: Install gomobile
         shell: bash
         run: |
           set -eux
-          export GOPATH="$HOME/go"
-          export PATH="$GOPATH/bin:$PATH"
-          export GO111MODULE=off
-
-          mkdir -p "$GOPATH/src/golang.org/x"
-          cd "$GOPATH/src/golang.org/x"
-
-          [ -d mobile ] || git clone https://go.googlesource.com/mobile
-          [ -d mod ]    || git clone https://go.googlesource.com/mod
-          [ -d sync ]   || git clone https://go.googlesource.com/sync
-          [ -d tools ]  || git clone https://go.googlesource.com/tools
-          [ -d sys ]    || git clone https://go.googlesource.com/sys
-
-          cd mobile
-          go install ./cmd/gomobile ./cmd/gobind
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
           gomobile init
 
       - name: Build DNSTT.xcframework
         shell: bash
         run: |
           set -eux
-          export GOPATH="$HOME/go"
-          export PATH="$GOPATH/bin:$PATH"
-          export GO111MODULE=off
-
           mkdir -p packages/dnstt_mobile/ios/Frameworks
-
-          mkdir -p "$GOPATH/src/example.com"
-          rm -rf "$GOPATH/src/example.com/dnsttwrap"
-          ln -s "$GITHUB_WORKSPACE/go/dnsttwrap" "$GOPATH/src/example.com/dnsttwrap"
-
           gomobile bind -target=ios \
-            -o "$GITHUB_WORKSPACE/packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework" \
+            -o packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework \
             -prefix=DNSTT \
-            example.com/dnsttwrap
+            ./go/dnsttwrap
 
-      - name: (debug) show generated symbols
-        shell: bash
-        run: |
-          set -eux
-          grep -R "StartTunnel\|StopTunnel\|IsRunning\|LastError" -n \
-            packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework || true
+          echo "=== headers ==="
+          find packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -name "*.h" -maxdepth 6 -print | head -n 20
 
       - name: Flutter pub get
         working-directory: app
