@@ -33,7 +33,7 @@ jobs:
 
     # رفع الملف الناتج لكي تحمله أنت لاحقاً
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Runner.app
         path: build/ios/iphoneos/Runner.app
