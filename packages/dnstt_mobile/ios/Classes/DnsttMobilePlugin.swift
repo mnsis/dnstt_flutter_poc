@@ -19,18 +19,23 @@ public class DnsttMobilePlugin: NSObject, FlutterPlugin {
         result(FlutterError(code: "invalid_args", message: "Missing tunnel arguments", details: nil))
         return
       }
-      let started = DNSTTStartTunnel(domain, pubkey, resolver)
+
+      // NOTE: gomobile bind exports package-level funcs as class methods on DNSTT + packageName
+      let started = DNSTTDnsttwrap.startTunnel(withDomain: domain, pubkey: pubkey, resolver: resolver)
       result(started)
+
     case "stopTunnel":
-      DNSTTStopTunnel()
+      DNSTTDnsttwrap.stopTunnel()
       result(nil)
+
     case "status":
-      let running = DNSTTIsRunning()
-      let lastError = DNSTTLastError()
+      let running = DNSTTDnsttwrap.isRunning()
+      let lastError = DNSTTDnsttwrap.lastError()
       result([
         "running": running,
         "lastError": lastError,
       ])
+
     default:
       result(FlutterMethodNotImplemented)
     }
