@@ -18,7 +18,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.x'
+          go-version: '1.22.x'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -31,12 +31,21 @@ jobs:
         shell: bash
         run: |
           set -eux
+          GOPATH="$(go env GOPATH)"
+          echo "GOPATH=${GOPATH}" >> "${GITHUB_ENV}"
+          echo "${GOPATH}/bin" >> "${GITHUB_PATH}"
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
+          mkdir -p "${GOPATH}/src/golang.org/x"
+          if [ ! -d "${GOPATH}/src/golang.org/x/mobile" ]; then
+            git clone https://go.googlesource.com/mobile "${GOPATH}/src/golang.org/x/mobile"
+          fi
           gomobile init
 
       - name: Build DNSTT.xcframework
         shell: bash
+        env:
+          GOPATH: ${{ env.GOPATH }}
         run: |
           set -eux
           test -f go/dnsttwrap/go.mod
