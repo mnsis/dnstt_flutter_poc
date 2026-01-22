@@ -20,33 +20,25 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: 'stable'
 
-      - name: Install gomobile (with GOPATH sources)
+      - name: Install gomobile
         run: |
-          set -eux
-
-          # install tools
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
-
-          # ensure golang/mobile sources exist in GOPATH/src (gobind expects these)
-          GOPATH="$(go env GOPATH)"
-          mkdir -p "$GOPATH/src/golang.org/x"
-          if [ ! -d "$GOPATH/src/golang.org/x/mobile" ]; then
-            git clone --depth 1 https://github.com/golang/mobile "$GOPATH/src/golang.org/x/mobile"
-          fi
-
-          # init toolchains
           gomobile init
 
       - name: Build DNSTT.xcframework
+        env:
+          GOFLAGS: -mod=mod
         run: |
           set -eux
+          rm -rf vendor go/dnsttwrap/vendor
           mkdir -p packages/dnstt_mobile/ios/Frameworks
-          cd go/dnsttwrap
+          pushd go/dnsttwrap
           go mod tidy
-          gomobile bind -target=ios -prefix DNSTT -o ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework .
+          gomobile bind -target=ios -o ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -prefix=DNSTT .
+          popd
 
       - name: Flutter pub get
         working-directory: app
@@ -54,7 +46,7 @@ jobs:
 
       - name: Build iOS (no codesign)
         working-directory: app
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --no-codesign
 
       - name: Zip Runner.app
         working-directory: app
