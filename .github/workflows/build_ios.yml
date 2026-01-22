@@ -24,7 +24,10 @@ jobs:
 
       - name: Build DNSTT.xcframework
         run: |
-          gomobile bind -target=ios -o packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -prefix=DNSTT ./go/dnsttwrap
+          mkdir -p packages/dnstt_mobile/ios/Frameworks
+          cd go/dnsttwrap
+          go mod tidy
+          gomobile bind -target=ios -prefix DNSTT -o ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework .
 
       - name: Flutter pub get
         working-directory: app
