@@ -39,14 +39,17 @@ jobs:
         shell: bash
         run: |
           set -eux
+          test -f go/dnsttwrap/go.mod
           mkdir -p packages/dnstt_mobile/ios/Frameworks
+          pushd go/dnsttwrap
+          go mod tidy
           gomobile bind -target=ios \
-            -o packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework \
+            -o ../../packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework \
             -prefix=DNSTT \
-            ./go/dnsttwrap
-
+            .
+          popd
           echo "=== headers ==="
-          find packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -name "*.h" -maxdepth 6 -print | head -n 20
+          find packages/dnstt_mobile/ios/Frameworks/DNSTT.xcframework -name "*.h" -maxdepth 6 -print | head -n 30
 
       - name: Flutter pub get
         working-directory: app

@@ -5,8 +5,7 @@ import DNSTT
 public class DnsttMobilePlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "dnstt_mobile", binaryMessenger: registrar.messenger())
-    let instance = DnsttMobilePlugin()
-    registrar.addMethodCallDelegate(instance, channel: channel)
+    registrar.addMethodCallDelegate(DnsttMobilePlugin(), channel: channel)
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -19,18 +18,16 @@ public class DnsttMobilePlugin: NSObject, FlutterPlugin {
         result(FlutterError(code: "invalid_args", message: "Missing tunnel arguments", details: nil))
         return
       }
-
-      // gomobile bind exports functions like GoDnsttwrapStartTunnel(...)
-      let started = DNSTT.GoDnsttwrapStartTunnel(domain, pubkey, resolver)
+      let started = DNSTTDnsttwrap.startTunnel(domain, pubkey: pubkey, resolver: resolver)
       result(started)
 
     case "stopTunnel":
-      DNSTT.GoDnsttwrapStopTunnel()
+      DNSTTDnsttwrap.stopTunnel()
       result(nil)
 
     case "status":
-      let running = DNSTT.GoDnsttwrapIsRunning()
-      let lastError = DNSTT.GoDnsttwrapLastError()
+      let running = DNSTTDnsttwrap.isRunning()
+      let lastError = DNSTTDnsttwrap.lastError()
       result([
         "running": running,
         "lastError": lastError,
